@@ -217,7 +217,7 @@ class PrinterConfig:
         data = '\n'.join(buffer)
         del buffer[:]
         sbuffer = io.StringIO(data)
-        fileconfig.readfp(sbuffer, filename)
+        fileconfig.read_file(sbuffer, filename)
     def _resolve_include(self, source_filename, include_spec, fileconfig,
                          visited):
         dirname = os.path.dirname(source_filename)
@@ -420,4 +420,4 @@ class PrinterConfig:
             logging.exception(msg)
             raise gcode.error(msg)
         # Request a restart
-        gcode.request_restart('restart')
+        gcode.request_restart('firmware_restart')

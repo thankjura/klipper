@@ -74,6 +74,11 @@ class PrinterProbe:
         self.gcode.register_command('Z_OFFSET_APPLY_PROBE',
                                     self.cmd_Z_OFFSET_APPLY_PROBE,
                                     desc=self.cmd_Z_OFFSET_APPLY_PROBE_help)
+        self.gcode.register_command('MKS28', self.cmd_MKS28,
+                                    desc=self.cmd_MKS28_help)
+        self.gcode.register_command('RESET_ZOFFSET', self.cmd_RESET_ZOFFSET,
+                                    desc=self.cmd_RESET_ZOFFSET_help)
+        self.probe_count = 0
     def _handle_homing_move_begin(self, hmove):
         if self.mcu_probe in hmove.get_mcu_endstops():
             self.mcu_probe.probe_prepare(hmove)
@@ -290,7 +295,21 @@ class PrinterProbe:
                 % (self.name, new_calibrate))
             configfile.set(self.name, 'z_offset', "%.3f" % (new_calibrate,))
     cmd_Z_OFFSET_APPLY_PROBE_help = "Adjust the probe's z_offset"
-
+    def cmd_MKS28(self,gcmd):
+        toolhead = self.printer.lookup_object('toolhead')
+        pos = toolhead.get_position()
+        pos[0] -= self.x_offset
+        pos[1] -= self.y_offset
+        self._move(pos, self.speed)
+    cmd_MKS28_help = "MKS G28 --> nozzle_x_position - probe_x_position, nozzle_y_position - probe_y_position"
+    def cmd_RESET_ZOFFSET(self,gcmd):
+        self.gcode.respond_info(
+            "%s: Reset z_offset: %.3f\n"
+            "The SAVE_CONFIG command will update the printer config file\n"
+            "with the above and restart the printer." % (self.name, 0.000))
+        configfile = self.printer.lookup_object('configfile')
+        configfile.set(self.name, 'z_offset', "%.3f" % (0.000,))
+    cmd_RESET_ZOFFSET_help = "Reset the probe's z_offset"
 # Endstop wrapper that enables probe specific features
 class ProbeEndstopWrapper:
     def __init__(self, config):
@@ -435,9 +454,13 @@ class ProbePointsHelper:
             raise gcmd.error("horizontal_move_z can't be less than"
                              " probe's z_offset")
         probe.multi_probe_begin()
+        self.probe_count = 0
         while 1:
+            self.gcode.respond_info("MKS count=%d" % (self.probe_count))
             done = self._move_next()
+            self.probe_count=self.probe_count+1
             if done:
+                self.probe_count = 0
                 break
             pos = probe.run_probe(gcmd)
             self.results.append(pos)

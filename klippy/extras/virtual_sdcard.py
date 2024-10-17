@@ -5,6 +5,7 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import os, logging, io
 
+
 VALID_GCODE_EXTS = ['gcode', 'g', 'gco']
 
 class VirtualSD:
@@ -258,7 +259,7 @@ class VirtualSD:
             # Dispatch command
             self.cmd_from_sd = True
             line = lines.pop()
-            next_file_position = self.file_position + len(line) + 1
+            next_file_position = self.file_position + len(line.encode()) + 1
             self.next_file_position = next_file_position
             try:
                 self.gcode.run_script(line)
